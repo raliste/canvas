@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Canvas</title>
+  <meta charset="utf-8" />
+<style>
+* {
+  margin: 0;
+  padding: 0;
+}
+
+#canvas-container {
+  width: 800px;
+  height: 250px;
+  background-color: #EEE;
+  position: relative;
+  overflow: hidden;
+}
+
+#canvas-container .canvas-box {
+  position: absolute;
+  background-color: #c3d9ff;
+  top: 0;
+  left: 0;
+  width: 100px;
+  height: 100px;
+  font: 20px Arial;
+}
+
+.ui-resizable-se {
+  border: solid 1px #000;
+  width: 20px;
+  height: 20px;
+  position: absolute;
+  bottom: 0;
+  right: 0;
+}
+
+#canvas-output {
+  display: none;
+}
+</style>
+</head>
+<body>
+  <div id="canvas-container">
+  </div>
+  <canvas id="canvas-output" width="800" height="250"></canvas>
+  <div id="canvas-final"></div>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.21/jquery-ui.js"></script>
+  <script src="canvas2image.js"></script>
+
+  <script>
+  (function($) {
+    var boxes = {};
+
+    function initializeBoxes() {
+      $('#canvas-container .canvas-box').each(function(i, div) {
+        if(boxes[div.id] === undefined) {
+          boxes[div.id] = {position: {}, size: {}, target: null};
+        }
+      });
+    }
+
+    function addBox(options) {
+      var options = options || {};
+      var div = document.createElement('div');
+
+      div.id = 'canvas-box-' + randomString();
+      div.className = 'canvas-box';
+
+      boxes[div.id] = {
+        position: {left: 0, top: 0},
+        size: {width: 100, height: 100},
+        target: div
+      }
+    
+      if(options.movable) {
+        div.className += ' canvas-movable';
+      }
+      if(options.resizable) {
+        div.className += ' canvas-resizable';
+      }
+      if(options.text) {
+        var text = prompt('Ingresa texto', '');
+        div.innerHTML = text;
+        boxes[div.id].text = text;
+      }
+
+      $('#canvas-container').append(div);
+      checkForEvents();
+    }
+
+    function checkForEvents() {
+      $('#canvas-container .canvas-movable').draggable({
+        containment: 'parent',
+        stop: function(event, ui) {
+          boxes[event.target.id].position = ui.position;
+        }
+      });
+
+      $('#canvas-container .canvas-resizable').resizable({
+        stop: function(event, ui) {
+          boxes[event.target.id].size = ui.size;
+        }
+      });
+    }
+
+    function boxesCheck() {
+      initializeBoxes();
+
+      checkForEvents();
+    }
+
+    function main() {
+      boxesCheck();
+
+      // Expose methods
+      window.$add = addBox;
+      window.$render = renderCanvas;
+    }
+
+    function renderCanvas() {
+      var canvas = $('#canvas-output')[0];
+      var ctx = canvas.getContext('2d');
+
+      canvasDrawRectangle(ctx, 0, 0, 800, 250);
+
+      for(box in boxes) {
+        box = boxes[box];
+
+        canvasDrawRectangle(ctx, box.position.left, box.position.top, box.size.width, box.size.height);
+        if(box.text) {
+          canvasDrawText(ctx, box.position.left, box.position.top, $(box.target).text());
+        }
+      }
+      
+      $('#canvas-final').append(Canvas2Image.saveAsJPEG(canvas, true));
+    }
+
+    function canvasDrawRectangle(ctx, x, y, width, height) {
+      ctx.beginPath();
+      ctx.rect(x, y, width, height);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+    }
+
+    function canvasDrawImage(ctx, x, y, src) {
+      var img = new Image();
+
+      img.onload = function() {
+        ctx.drawImage(img, x, y);
+      }
+
+      img.src = src;
+    }
+
+    function canvasDrawText(ctx, x, y, text) {
+      ctx.font = '20px Arial';
+      ctx.fillStyle = 'black';
+      ctx.fillText(text, x, y + 20);
+    }
+
+    function randomString() {
+      var text = '';
+      var possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+
+      var i;
+      for(i=0; i < 5; i++) {
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+      }
+
+      return text;
+    }
+
+    main();
+  })(jQuery);
+  </script>
+</body>
+</html>
